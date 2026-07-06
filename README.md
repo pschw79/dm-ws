@@ -17,6 +17,13 @@ pip install -r requirements.txt
 cp .env.example .env   # fill in your Azure credentials
 ```
 
+## Working directory
+
+**Always work from this root folder** (`dm-ws/`) — not from a sub-folder. Every file you create
+during the labs (`agent.py`, `mcp_server.py`, `connected_agent.py`, etc.) goes here at the
+root. The `data/` folder, `.env`, and `requirements.txt` are all at the root too, so the
+path resolution in the lab scripts works without any changes.
+
 ## Catching up with a baseline
 
 Each part has a completed file in `baseline/` you can copy from if you fall behind.
