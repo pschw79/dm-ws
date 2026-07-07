@@ -1,6 +1,6 @@
-"""Part 9 — Human-in-the-loop & condition checker (starter).
+"""Part 10 — Human-in-the-loop & condition checker (starter).
 
-The A2A handoff from Part 8 is complete below. Your tasks are:
+The A2A handoff from Part 9 is complete below. Your tasks are:
 
   TODO (step 2) Implement fetch_package to fetch live data via the MCP server
   TODO (step 2) Implement suggest_condition to return one of VALID_CONDITIONS + confidence
@@ -21,13 +21,13 @@ Escalation rules to implement:
 Follow the lab steps in docs/segments/10-human-in-the-loop-and-condition-checker.md.
 
 Run:
-    python starter/09-1-hitl-agent.py --check-condition --order DM-1037
-    python starter/09-1-hitl-agent.py --check-condition --order DM-1037 --propose-action
-    python starter/09-1-hitl-agent.py --check-condition --order DM-1060 --propose-action
-    python starter/09-1-hitl-agent.py --check-condition --order DM-1037 --decide approve --by Darryl
-    python starter/09-1-hitl-agent.py --check-condition --order DM-1037 --decide correct --to damaged --by Darryl --note "Photo shows crushed corner"
+    python starter/10-1-hitl-agent.py --check-condition --order DM-1037
+    python starter/10-1-hitl-agent.py --check-condition --order DM-1037 --propose-action
+    python starter/10-1-hitl-agent.py --check-condition --order DM-1060 --propose-action
+    python starter/10-1-hitl-agent.py --check-condition --order DM-1037 --decide approve --by Darryl
+    python starter/10-1-hitl-agent.py --check-condition --order DM-1037 --decide correct --to damaged --by Darryl --note "Photo shows crushed corner"
 
-Compare with the completed version at baseline/09-1-hitl-agent.py.
+Compare with the completed version at baseline/10-1-hitl-agent.py.
 """
 from __future__ import annotations
 

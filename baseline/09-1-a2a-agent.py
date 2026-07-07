@@ -1,17 +1,16 @@
-"""Part 8 — Native tools & A2A handoff.
+"""Part 9 — A2A handoff.
 
-Extends the Part 7 connected agent with:
-  - A native parse_label function tool (runs in-process; no MCP server needed)
+Extends the Part 8 native-tools agent with:
   - An explicit RegionalManagerAgent -> PackageLabelParser A2A handoff
 
 Uses the live mcp_server.py for MCP tools; falls back to packagemcp.
 
 Run:
-    python baseline/08-1-a2a-agent.py --show-tools
-    python baseline/08-1-a2a-agent.py --compare-tools
-    python baseline/08-1-a2a-agent.py --handoff --label "DM-1037 frgile rte R-2"
-    python baseline/08-1-a2a-agent.py --handoff --label "???" --show-handoff
-    python baseline/08-1-a2a-agent.py --order DM-1037 --show-steps
+    python baseline/09-1-a2a-agent.py --show-tools
+    python baseline/09-1-a2a-agent.py --compare-tools
+    python baseline/09-1-a2a-agent.py --handoff --label "DM-1037 frgile rte R-2"
+    python baseline/09-1-a2a-agent.py --handoff --label "???" --show-handoff
+    python baseline/09-1-a2a-agent.py --order DM-1037 --show-steps
 """
 from __future__ import annotations
 

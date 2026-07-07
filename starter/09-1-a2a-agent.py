@@ -1,25 +1,25 @@
-"""Part 8 — Native tools & A2A handoff (starter).
+"""Part 9 — A2A handoff (starter).
 
-The Part 7 connected agent is complete below. Your tasks are:
-  - TODO (step 2) Implement the native parse_label function tool (paste the provided snippet)
-  - TODO (step 2) Register PARSE_LABEL_TOOL in all_tools inside run_agent
-  - TODO (step 2) Dispatch parse_label calls in-process (not via the MCP server)
-  - (step 3 is pre-provisioned — just run --parse-label to see your tool produce real output)
-  - TODO (step 4) Write the explicit handoff contract (input, artifact, failure) as a comment
-  - TODO (step 5) Implement PackageLabelParser.run and RegionalManagerAgent.handle_label
-  - TODO (step 6) Run --handoff --label "???" --show-handoff and verify failure behavior
+The Part 8 native-tools agent is complete below (parse_label is implemented and
+registered). Your tasks are:
+  - TODO (step 1) Write the explicit handoff contract (input, artifact, failure) as a comment
+  - TODO (step 2) Implement PackageLabelParser.run (call parse_label and return json.loads result)
+  - TODO (step 2) Implement RegionalManagerAgent.handle_label:
+      - call self._parser.run(raw_label)
+      - if show_handoff: print data sent and artifact received
+      - print "RegionalManagerAgent -> PackageLabelParser -> {artifact}"
+      - on error: print a hold/re-label decision
+      - on success: print a route/handle action based on fragile flag
 
-Follow the lab steps in docs/segments/08-native-tools.md (steps 1-3) and docs/segments/09-a2a-handoff.md (steps 1-4).
+Follow the lab steps in docs/segments/09-a2a-handoff.md.
 
 Run:
-    python starter/08-1-a2a-agent.py --show-tools
-    python starter/08-1-a2a-agent.py --parse-label
-    python starter/08-1-a2a-agent.py --parse-label --label "???"
-    python starter/08-1-a2a-agent.py --handoff --label "DM-1037 frgile rte R-2"
-    python starter/08-1-a2a-agent.py --handoff --label "???" --show-handoff
-    python starter/08-1-a2a-agent.py --order DM-1037 --show-steps
+    python starter/09-1-a2a-agent.py --show-tools
+    python starter/09-1-a2a-agent.py --handoff --label "DM-1037 frgile rte R-2"
+    python starter/09-1-a2a-agent.py --handoff --label "???" --show-handoff
+    python starter/09-1-a2a-agent.py --order DM-1037 --show-steps
 
-Compare with the completed version at baseline/08-1-a2a-agent.py.
+Compare with the completed version at baseline/09-1-a2a-agent.py.
 """
 from __future__ import annotations
 
@@ -72,29 +72,46 @@ Grounding rule: base every factual claim on a tool result. If you have not looke
 Escalation: if an order is missing a route or needs a manager's decision, ask for clarification rather than guessing.\
 """
 
-# ── TODO (step 2): Native parse_label function tool ───────────────────────────
-#
-# Implement a plain Python function (no MCP server needed) that parses a raw
-# shipping label string into structured fields.
-#
-# Contract
-#   Inputs : raw_label (str) — the messy text from a physical label.
-#   Returns: JSON string {orderId, fragile, route, confidence} on success.
-#            JSON string {error: "unparseable", rawLabel} when no order ID found.
-#   Read-only: must not write to any system.
-#
-# Hints
-#   - Order ID pattern  : "DM-" followed by one or more digits (e.g. DM-1037)
-#   - Fragile indicator : words like "fragile", "frgile", "frgl"
-#   - Route pattern     : "R-" followed by a digit, possibly preceded by "rte" or "route"
-#   - Confidence        : start at 1.0; penalise for missing route (-0.15) or fuzzy spelling (-0.08)
+# ── Native function tool (Part 8 complete) ───────────────────────────────────
+# Runs in-process; no MCP server needed. Compare with the MCP tools below.
+
+_ORDER_RE   = re.compile(r"\bDM-\d+\b", re.IGNORECASE)
+_ROUTE_RE   = re.compile(r"\b(?:rte|route)\s*(R-\d+)\b", re.IGNORECASE)
+_FRAGILE_RE = re.compile(r"\b(?:fragile|frgile|frgl|frg)\b", re.IGNORECASE)
+
 
 def parse_label(raw_label: str) -> str:
     """Parse a raw shipping label string into structured fields.
 
-    TODO: implement this function following the contract above.
+    Inputs : raw_label (str) — the messy label text from the package.
+    Returns: JSON {orderId, fragile, route, confidence} on success,
+             or     {error, rawLabel} when no order ID is found.
+    Read-only: does not write to any system.
     """
-    return json.dumps({"error": "not implemented", "rawLabel": raw_label})
+    order_match   = _ORDER_RE.search(raw_label)
+    route_match   = _ROUTE_RE.search(raw_label)
+    fragile_match = _FRAGILE_RE.search(raw_label)
+
+    if not order_match:
+        return json.dumps({"error": "unparseable", "rawLabel": raw_label})
+
+    order_id = order_match.group(0).upper()
+    route    = route_match.group(1).upper() if route_match else None
+    fragile  = fragile_match is not None
+
+    # Confidence: penalise for missing fields or fuzzy spellings
+    confidence = 1.0
+    if not route:
+        confidence -= 0.15
+    if fragile_match and fragile_match.group(0).lower() not in ("fragile",):
+        confidence -= 0.08  # fuzzy spelling detected
+
+    return json.dumps({
+        "orderId":    order_id,
+        "fragile":    fragile,
+        "route":      route,
+        "confidence": round(confidence, 2),
+    })
 
 
 # OpenAI function-tool descriptor — update the description once parse_label works.
@@ -120,15 +137,16 @@ PARSE_LABEL_TOOL: dict[str, Any] = {
 }
 
 
-# ── TODO (steps 4-6): A2A handoff ────────────────────────────────────────────
+# ── TODO (steps 1-2): A2A handoff ───────────────────────────────────────────
 #
-# Write the explicit handoff contract here before implementing the classes:
+# TODO (step 1): Write the explicit handoff contract here before implementing
+# the classes:
 #
 #   Handoff contract: RegionalManagerAgent -> PackageLabelParser
-#   Input data   : rawLabel (str) — the raw shipping label text
-#   Artifact     : {orderId, fragile, route, confidence} on success
-#   Failure      : {error: "unparseable", rawLabel} — no system write, ever
-#   Boundary     : PackageLabelParser parses only; does not reason about routes or act on systems
+#   Input data   : ???
+#   Artifact     : ???
+#   Failure      : ???
+#   Boundary     : ???
 
 class PackageLabelParser:
     """Specialist agent: parses a label and returns a structured artifact.
@@ -178,8 +196,7 @@ async def run_agent(question: str, show_steps: bool = False) -> None:
                 }
                 for t in tools_result.tools
             ]
-            # TODO (step 2): replace the line below with: mcp_tools + [PARSE_LABEL_TOOL]
-            all_tools = mcp_tools
+            all_tools = mcp_tools + [PARSE_LABEL_TOOL]
 
             messages = [
                 {"role": "system", "content": INSTRUCTIONS},
@@ -204,10 +221,12 @@ async def run_agent(question: str, show_steps: bool = False) -> None:
                         if show_steps:
                             print(f"{step}) calling {tc.function.name}({args})")
 
-                        # TODO (step 2): if tc.function.name == "parse_label", call
-                        # parse_label(**args) in-process instead of going to the MCP server.
-                        result = await session.call_tool(tc.function.name, args)
-                        tool_text = result.content[0].text if result.content else ""
+                        # Dispatch native tool in-process; MCP tools go to the server.
+                        if tc.function.name == "parse_label":
+                            tool_text = parse_label(**args)
+                        else:
+                            result = await session.call_tool(tc.function.name, args)
+                            tool_text = result.content[0].text if result.content else ""
 
                         if show_steps:
                             print(f"   -> {tool_text}")
@@ -235,20 +254,11 @@ async def show_tools_async() -> None:
         print(f"  {t.name} — {first_line}")
 
 
-def run_parse_label(label: str) -> None:
-    print(f"Input : {label!r}")
-    result = parse_label(label)
-    parsed = json.loads(result)
-    print(f"Output: {json.dumps(parsed, indent=2)}")
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Dunder Mifflin A2A agent")
     parser.add_argument("--order", help="Package/order ID to investigate")
     parser.add_argument("--show-steps", action="store_true", help="Print each tool call and result")
     parser.add_argument("--show-tools", action="store_true", help="List native and MCP tools")
-    parser.add_argument("--parse-label", action="store_true",
-                        help="Run parse_label on --label and print the structured output")
     parser.add_argument("--handoff", action="store_true",
                         help="Run RegionalManagerAgent -> PackageLabelParser handoff")
     parser.add_argument("--label", default="DM-1037 frgile  rte R-2",
@@ -259,8 +269,6 @@ if __name__ == "__main__":
 
     if args.show_tools:
         asyncio.run(show_tools_async())
-    elif args.parse_label:
-        run_parse_label(args.label)
     elif args.handoff:
         agent = RegionalManagerAgent()
         agent.handle_label(args.label, show_handoff=args.show_handoff)

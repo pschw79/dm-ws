@@ -1,4 +1,4 @@
-"""Part 9 — Human-in-the-loop & condition checker.
+"""Part 10 — Human-in-the-loop & condition checker.
 
 Extends Part 8 with a PackageConditionChecker that:
   - Fetches live package data via the running MCP server
@@ -15,11 +15,11 @@ Escalation rules:
   Rule 3 — Customer-impacting or irreversible proposed action
 
 Run:
-    python baseline/09-1-hitl-agent.py --check-condition --order DM-1037
-    python baseline/09-1-hitl-agent.py --check-condition --order DM-1037 --propose-action
-    python baseline/09-1-hitl-agent.py --check-condition --order DM-1060 --propose-action
-    python baseline/09-1-hitl-agent.py --check-condition --order DM-1037 --decide approve --by Darryl
-    python baseline/09-1-hitl-agent.py --check-condition --order DM-1037 --decide correct --to damaged --by Darryl --note "Photo shows crushed corner"
+    python baseline/10-1-hitl-agent.py --check-condition --order DM-1037
+    python baseline/10-1-hitl-agent.py --check-condition --order DM-1037 --propose-action
+    python baseline/10-1-hitl-agent.py --check-condition --order DM-1060 --propose-action
+    python baseline/10-1-hitl-agent.py --check-condition --order DM-1037 --decide approve --by Darryl
+    python baseline/10-1-hitl-agent.py --check-condition --order DM-1037 --decide correct --to damaged --by Darryl --note "Photo shows crushed corner"
 """
 from __future__ import annotations
 
