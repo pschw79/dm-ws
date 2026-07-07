@@ -4,7 +4,7 @@ The Part 7 connected agent is complete below. Your tasks are:
   - TODO (step 2) Implement the native parse_label function tool (paste the provided snippet)
   - TODO (step 2) Register PARSE_LABEL_TOOL in all_tools inside run_agent
   - TODO (step 2) Dispatch parse_label calls in-process (not via the MCP server)
-  - (step 3 is pre-provisioned — just run --compare-tools)
+  - (step 3 is pre-provisioned — just run --parse-label to see your tool produce real output)
   - TODO (step 4) Write the explicit handoff contract (input, artifact, failure) as a comment
   - TODO (step 5) Implement PackageLabelParser.run and RegionalManagerAgent.handle_label
   - TODO (step 6) Run --handoff --label "???" --show-handoff and verify failure behavior
@@ -13,7 +13,8 @@ Follow the lab steps in docs/segments/08-native-tools.md (steps 1-3) and docs/se
 
 Run:
     python starter/08-1-a2a-agent.py --show-tools
-    python starter/08-1-a2a-agent.py --compare-tools
+    python starter/08-1-a2a-agent.py --parse-label
+    python starter/08-1-a2a-agent.py --parse-label --label "???"
     python starter/08-1-a2a-agent.py --handoff --label "DM-1037 frgile rte R-2"
     python starter/08-1-a2a-agent.py --handoff --label "???" --show-handoff
     python starter/08-1-a2a-agent.py --order DM-1037 --show-steps
@@ -234,26 +235,11 @@ async def show_tools_async() -> None:
         print(f"  {t.name} — {first_line}")
 
 
-async def compare_tools_async() -> None:
-    async with stdio_client(SERVER_PARAMS) as (read, write):
-        async with ClientSession(read, write) as session:
-            await session.initialize()
-            tools_result = await session.list_tools()
-    mcp_example = next(
-        (t for t in tools_result.tools if t.name == "lookup_order_status"), None
-    )
-    mcp_desc = mcp_example.description.splitlines()[0] if mcp_example else "lookup_order_status"
-
-    col = 44
-    print(f"{'Native: parse_label':<{col}}  {'MCP: lookup_order_status':<{col}}")
-    print(f"{'-' * col}  {'-' * col}")
-    print(f"{'In-process — no server':<{col}}  {'Served by mcp_server.py':<{col}}")
-    print(f"{'Owned by this one agent':<{col}}  {'Shared by any agent':<{col}}")
-    print(f"{'No deployment overhead':<{col}}  {'Independent deployment':<{col}}")
-    print(f"{'Best for: small, local, single-agent job':<{col}}  {'Best for: shared, reused, evolving capability':<{col}}")
-    print()
-    print("Prefer native  : small, self-contained, used by exactly one agent.")
-    print("Prefer MCP     : shared across agents, deployed or evolved on its own.")
+def run_parse_label(label: str) -> None:
+    print(f"Input : {label!r}")
+    result = parse_label(label)
+    parsed = json.loads(result)
+    print(f"Output: {json.dumps(parsed, indent=2)}")
 
 
 if __name__ == "__main__":
@@ -261,8 +247,8 @@ if __name__ == "__main__":
     parser.add_argument("--order", help="Package/order ID to investigate")
     parser.add_argument("--show-steps", action="store_true", help="Print each tool call and result")
     parser.add_argument("--show-tools", action="store_true", help="List native and MCP tools")
-    parser.add_argument("--compare-tools", action="store_true",
-                        help="TODO (step 3): side-by-side native vs MCP comparison")
+    parser.add_argument("--parse-label", action="store_true",
+                        help="Run parse_label on --label and print the structured output")
     parser.add_argument("--handoff", action="store_true",
                         help="Run RegionalManagerAgent -> PackageLabelParser handoff")
     parser.add_argument("--label", default="DM-1037 frgile  rte R-2",
@@ -273,8 +259,8 @@ if __name__ == "__main__":
 
     if args.show_tools:
         asyncio.run(show_tools_async())
-    elif args.compare_tools:
-        asyncio.run(compare_tools_async())
+    elif args.parse_label:
+        run_parse_label(args.label)
     elif args.handoff:
         agent = RegionalManagerAgent()
         agent.handle_label(args.label, show_handoff=args.show_handoff)
