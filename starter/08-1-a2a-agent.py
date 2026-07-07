@@ -1,10 +1,10 @@
 """Part 8 — Native tools & A2A handoff (starter).
 
 The Part 7 connected agent is complete below. Your tasks are:
-  - TODO (step 2) Implement the native parse_label function tool
+  - TODO (step 2) Implement the native parse_label function tool (paste the provided snippet)
   - TODO (step 2) Register PARSE_LABEL_TOOL in all_tools inside run_agent
   - TODO (step 2) Dispatch parse_label calls in-process (not via the MCP server)
-  - TODO (step 3) Run --compare-tools to articulate native vs MCP trade-offs
+  - (step 3 is pre-provisioned — just run --compare-tools)
   - TODO (step 4) Write the explicit handoff contract (input, artifact, failure) as a comment
   - TODO (step 5) Implement PackageLabelParser.run and RegionalManagerAgent.handle_label
   - TODO (step 6) Run --handoff --label "???" --show-handoff and verify failure behavior
@@ -26,6 +26,7 @@ import argparse
 import asyncio
 import json
 import os
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -233,6 +234,28 @@ async def show_tools_async() -> None:
         print(f"  {t.name} — {first_line}")
 
 
+async def compare_tools_async() -> None:
+    async with stdio_client(SERVER_PARAMS) as (read, write):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            tools_result = await session.list_tools()
+    mcp_example = next(
+        (t for t in tools_result.tools if t.name == "lookup_order_status"), None
+    )
+    mcp_desc = mcp_example.description.splitlines()[0] if mcp_example else "lookup_order_status"
+
+    col = 44
+    print(f"{'Native: parse_label':<{col}}  {'MCP: lookup_order_status':<{col}}")
+    print(f"{'-' * col}  {'-' * col}")
+    print(f"{'In-process — no server':<{col}}  {'Served by mcp_server.py':<{col}}")
+    print(f"{'Owned by this one agent':<{col}}  {'Shared by any agent':<{col}}")
+    print(f"{'No deployment overhead':<{col}}  {'Independent deployment':<{col}}")
+    print(f"{'Best for: small, local, single-agent job':<{col}}  {'Best for: shared, reused, evolving capability':<{col}}")
+    print()
+    print("Prefer native  : small, self-contained, used by exactly one agent.")
+    print("Prefer MCP     : shared across agents, deployed or evolved on its own.")
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Dunder Mifflin A2A agent")
     parser.add_argument("--order", help="Package/order ID to investigate")
@@ -251,9 +274,7 @@ if __name__ == "__main__":
     if args.show_tools:
         asyncio.run(show_tools_async())
     elif args.compare_tools:
-        print("TODO (step 3): implement --compare-tools")
-        print("  Show parse_label (native, in-process) next to lookup_order_status (MCP).")
-        print("  For each: hosting, ownership, maintenance cost, when it wins.")
+        asyncio.run(compare_tools_async())
     elif args.handoff:
         agent = RegionalManagerAgent()
         agent.handle_label(args.label, show_handoff=args.show_handoff)
