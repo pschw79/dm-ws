@@ -1,14 +1,14 @@
-"""Part 9 — A2A handoff (starter).
+"""Part 9 - A2A handoff (starter).
 
 The Part 8 native-tools agent is complete below (parse_label is implemented and
-registered). You only add the A2A handoff — no big chunks of Python to invent.
+registered). You only add the A2A handoff - no big chunks of Python to invent.
 Each TODO has a ready-to-paste snippet in the lab steps:
 
   - TODO (step 2) Write the explicit handoff contract (input, artifact, failure) as a comment
   - TODO (step 3) Implement PackageLabelParser.run (call parse_label, return json.loads result)
   - TODO (step 4) Implement RegionalManagerAgent.handle_label (delegate, then decide)
 
-Follow the lab steps in docs/segments/09-a2a-handoff.md — paste each snippet where its TODO sits.
+Follow the lab steps in docs/segments/09-a2a-handoff.md - paste each snippet where its TODO sits.
 
 Run (after you copy this file to package_label_parser_agent.py):
     python package_label_parser_agent.py --show-tools
@@ -80,7 +80,7 @@ _FRAGILE_RE = re.compile(r"\b(?:fragile|frgile|frgl|frg)\b", re.IGNORECASE)
 def parse_label(raw_label: str) -> str:
     """Parse a raw shipping label string into structured fields.
 
-    Inputs : raw_label (str) — the messy label text from the package.
+    Inputs : raw_label (str) - the messy label text from the package.
     Returns: JSON {orderId, fragile, route, confidence} on success,
              or     {error, rawLabel} when no order ID is found.
     Read-only: does not write to any system.
@@ -173,8 +173,8 @@ class RegionalManagerAgent:
         self._parser = PackageLabelParser()
 
     def handle_label(self, raw_label: str, show_handoff: bool = False) -> None:
-        # TODO (step 4): implement — see lab step 4
-        print("TODO: implement handle_label — see lab step 4")
+        # TODO (step 4): implement - see lab step 4
+        print("TODO: implement handle_label - see lab step 4")
 
 
 # ── Connected agent (Part 7 complete) + native parse_label ───────────────────
@@ -245,12 +245,12 @@ async def show_tools_async() -> None:
             await session.initialize()
             tools_result = await session.list_tools()
     print("Native tools (in-process, no server):")
-    print(f"  parse_label — {parse_label.__doc__.splitlines()[0]}")
+    print(f"  parse_label - {parse_label.__doc__.splitlines()[0]}")
     print()
     print("MCP tools (served by mcp_server.py / packagemcp):")
     for t in tools_result.tools:
         first_line = (t.description or "").splitlines()[0]
-        print(f"  {t.name} — {first_line}")
+        print(f"  {t.name} - {first_line}")
 
 
 if __name__ == "__main__":

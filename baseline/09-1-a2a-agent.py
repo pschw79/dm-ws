@@ -1,4 +1,4 @@
-"""Part 9 — A2A handoff.
+"""Part 9 - A2A handoff.
 
 Extends the Part 8 native-tools agent with:
   - An explicit RegionalManagerAgent -> PackageLabelParser A2A handoff
@@ -74,7 +74,7 @@ _FRAGILE_RE = re.compile(r"\b(?:fragile|frgile|frgl|frg)\b", re.IGNORECASE)
 def parse_label(raw_label: str) -> str:
     """Parse a raw shipping label string into structured fields.
 
-    Inputs : raw_label (str) — the messy label text from the package.
+    Inputs : raw_label (str) - the messy label text from the package.
     Returns: JSON {orderId, fragile, route, confidence} on success,
              or     {error, rawLabel} when no order ID is found.
     Read-only: does not write to any system.
@@ -128,12 +128,12 @@ PARSE_LABEL_TOOL: dict[str, Any] = {
 }
 
 
-# ── PackageLabelParser — A2A specialist agent ─────────────────────────────────
+# ── PackageLabelParser - A2A specialist agent ─────────────────────────────────
 #
 # Handoff contract
-#   Input data : rawLabel (str) — the raw shipping label text.
+#   Input data : rawLabel (str) - the raw shipping label text.
 #   Artifact   : {orderId, fragile, route, confidence} on success.
-#   Failure    : {error: "unparseable", rawLabel} — no system write, ever.
+#   Failure    : {error: "unparseable", rawLabel} - no system write, ever.
 #   Boundary   : parses only; does not reason about routes or act on systems.
 
 class PackageLabelParser:
@@ -143,7 +143,7 @@ class PackageLabelParser:
         return json.loads(parse_label(raw_label))
 
 
-# ── RegionalManagerAgent — delegates to PackageLabelParser via handoff ────────
+# ── RegionalManagerAgent - delegates to PackageLabelParser via handoff ────────
 
 class RegionalManagerAgent:
     """Coordinates operational decisions; delegates label parsing to PackageLabelParser."""
@@ -164,7 +164,7 @@ class RegionalManagerAgent:
         print(f"RegionalManagerAgent -> PackageLabelParser -> {json.dumps(artifact)}")
 
         if "error" in artifact:
-            print("Decision: label unparseable — hold package; request re-labelling.")
+            print("Decision: label unparseable - hold package; request re-labelling.")
         else:
             action = (
                 "handle with care; verify fragile label before loading"
@@ -243,12 +243,12 @@ async def show_tools_async() -> None:
             await session.initialize()
             tools_result = await session.list_tools()
     print("Native tools (in-process, no server):")
-    print(f"  parse_label — {parse_label.__doc__.splitlines()[0]}")
+    print(f"  parse_label - {parse_label.__doc__.splitlines()[0]}")
     print()
     print("MCP tools (served by mcp_server.py / packagemcp):")
     for t in tools_result.tools:
         first_line = (t.description or "").splitlines()[0]
-        print(f"  {t.name} — {first_line}")
+        print(f"  {t.name} - {first_line}")
 
 
 async def compare_tools_async() -> None:
@@ -264,7 +264,7 @@ async def compare_tools_async() -> None:
     col = 44
     print(f"{'Native: parse_label':<{col}}  {'MCP: lookup_order_status':<{col}}")
     print(f"{'-' * col}  {'-' * col}")
-    print(f"{'In-process — no server':<{col}}  {'Served by mcp_server.py':<{col}}")
+    print(f"{'In-process - no server':<{col}}  {'Served by mcp_server.py':<{col}}")
     print(f"{'Owned by this one agent':<{col}}  {'Shared by any agent':<{col}}")
     print(f"{'No deployment overhead':<{col}}  {'Independent deployment':<{col}}")
     print(f"{'Best for: small, local, single-agent job':<{col}}  {'Best for: shared, reused, evolving capability':<{col}}")

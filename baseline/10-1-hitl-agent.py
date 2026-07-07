@@ -1,4 +1,4 @@
-"""Part 10 — Human-in-the-loop & condition checker.
+"""Part 10 - Human-in-the-loop & condition checker.
 
 Extends Part 8 with a PackageConditionChecker that:
   - Fetches live package data via the running MCP server
@@ -10,16 +10,16 @@ Extends Part 8 with a PackageConditionChecker that:
 Condition categories: OK, damaged, unclear, missing label, wrong address, needs inspection
 
 Escalation rules:
-  Rule 1 — Confidence below threshold (< 0.85)
-  Rule 2 — High-risk condition: damaged, missing label, or wrong address
-  Rule 3 — Customer-impacting or irreversible proposed action
+  Rule 1 - Confidence below threshold (< 0.85)
+  Rule 2 - High-risk condition: damaged, missing label, or wrong address
+  Rule 3 - Customer-impacting or irreversible proposed action
 
 Run:
-    python baseline/10-1-hitl-agent.py --check-condition --order DM-1037
-    python baseline/10-1-hitl-agent.py --check-condition --order DM-1037 --propose-action
-    python baseline/10-1-hitl-agent.py --check-condition --order DM-1060 --propose-action
-    python baseline/10-1-hitl-agent.py --check-condition --order DM-1037 --decide approve --by Darryl
-    python baseline/10-1-hitl-agent.py --check-condition --order DM-1037 --decide correct --to damaged --by Darryl --note "Photo shows crushed corner"
+    python baseline/10-1-hitl-agent.py --check-condition --order PKG-2024-009
+    python baseline/10-1-hitl-agent.py --check-condition --order PKG-2024-009 --propose-action
+    python baseline/10-1-hitl-agent.py --check-condition --order PKG-2024-004 --propose-action
+    python baseline/10-1-hitl-agent.py --check-condition --order PKG-2024-009 --decide approve --by Darryl
+    python baseline/10-1-hitl-agent.py --check-condition --order PKG-2024-006 --decide correct --to damaged --by Darryl --note "Photo shows crushed corner"
 """
 from __future__ import annotations
 
@@ -78,17 +78,17 @@ def escalation_reason(
     if confidence < CONFIDENCE_THRESHOLD:
         return (
             f"Rule 1: confidence {confidence:.2f} is below threshold "
-            f"{CONFIDENCE_THRESHOLD} — human confirmation required"
+            f"{CONFIDENCE_THRESHOLD} - human confirmation required"
         )
     if condition in HIGH_RISK_CONDITIONS:
         return (
-            f"Rule 2: condition '{condition}' is high-risk — "
+            f"Rule 2: condition '{condition}' is high-risk - "
             "human review required before any downstream action"
         )
     if proposed_action and any(kw in proposed_action for kw in CUSTOMER_IMPACTING_KEYWORDS):
         return (
             f"Rule 3: proposed action '{proposed_action}' is customer-impacting or "
-            "irreversible — human confirmation required"
+            "irreversible - human confirmation required"
         )
     return None
 
@@ -106,7 +106,7 @@ async def fetch_package(package_id: str) -> dict[str, Any] | None:
                 return None
             # Parse "key=value, key=value" text into a dict
             fields: dict[str, Any] = {}
-            # Strip the "Package DM-XXXX: " prefix if present
+            # Strip the "Package PKG-XXXX: " prefix if present
             if ": " in text:
                 text = text.split(": ", 1)[1]
             for part in text.split(", "):
@@ -124,19 +124,19 @@ def suggest_condition(package_data: dict[str, Any]) -> tuple[str, float]:
     raw = " ".join(str(v) for v in package_data.values()).lower()
     status  = package_data.get("status", "").lower()
     fragile = str(package_data.get("fragile", "false")).lower() == "true"
-    truck   = str(package_data.get("truck", package_data.get("truck_id", ""))).strip()
+    truck   = str(package_data.get("truck", package_data.get("truck_id", ""))).strip().lower()
 
     if "missing label" in raw or "missing_label" in raw:
         return "missing label", 0.95
     if "wrong address" in raw or "wrong_address" in raw:
         return "wrong address", 0.90
-    if "damaged" in raw:
+    if status == "damaged" or "damag" in raw:
         return "damaged", 0.88
-    if status == "exception":
+    if status == "returned":
         return "needs inspection", 0.80
     if fragile and truck in ("none", ""):
         return "unclear", 0.72  # fragile with no truck assigned: ambiguous
-    if status in ("in_transit", "delivered", "pending"):
+    if status in ("order_created", "packaged", "ready_for_shipping", "shipped", "delivered"):
         return "OK", 0.96
     return "unclear", 0.60
 
@@ -218,7 +218,7 @@ async def cmd_check_condition(
     decided_by: str,
     note: str,
 ) -> None:
-    package_id = order_id if order_id.upper().startswith("DM-") else f"DM-{order_id}"
+    package_id = order_id if order_id.upper().startswith("PKG-") else f"PKG-2024-{int(order_id):03d}"
     package_data = await fetch_package(package_id)
 
     if package_data is None:
@@ -271,7 +271,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Dunder Mifflin HITL condition checker")
     parser.add_argument("--check-condition", action="store_true",
                         help="Run the condition checker for an order")
-    parser.add_argument("--order", help="Package/order ID (e.g. DM-1037 or 1037)")
+    parser.add_argument("--order", help="Package/order ID (e.g. PKG-2024-009)")
     parser.add_argument("--propose-action", action="store_true",
                         help="Show proposed action and human confirmation gate")
     parser.add_argument("--decide", choices=["approve", "reject", "correct"],
