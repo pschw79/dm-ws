@@ -6,7 +6,7 @@
   ],
   "integration_settings": {
     "copilot": {
-      "script": "sh",
+      "script": "py",
       "invoke_separator": "."
     }
   },
