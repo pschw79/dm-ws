@@ -31,6 +31,13 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from openai import AzureOpenAI
 
+import re
+ 
+_ORDER_RE   = re.compile(r"\b(?:DM|PKG)-[\w-]+", re.IGNORECASE)
+_ROUTE_RE   = re.compile(r"\b(?:rte|route)\s*((?:R|ROUTE)-[\w-]+)", re.IGNORECASE)
+_FRAGILE_RE = re.compile(r"\b(?:fragile|frgile|frgl|frg)\b", re.IGNORECASE)
+
+
 load_dotenv()
 
 # -- MCP server ---------------------------------------------------------------
@@ -83,11 +90,34 @@ Escalation: if an order is missing a route or needs a manager's decision, ask fo
 #   - Route pattern     : "R-" followed by a digit, possibly preceded by "rte" or "route"
 #   - Confidence        : start at 1.0; penalise for missing route (-0.15) or fuzzy spelling (-0.08)
 
-def parse_label(raw_label: str) -> str:
-    """Parse a raw shipping label string into structured fields.
 
-    TODO: implement this function following the contract above.
-    """
+
+def parse_label(raw_label: str) -> str:
+    """Parse a raw shipping label into structured fields (orderId, fragile, route, confidence)."""
+    order_match   = _ORDER_RE.search(raw_label)
+    route_match   = _ROUTE_RE.search(raw_label)
+    fragile_match = _FRAGILE_RE.search(raw_label)
+
+    if not order_match:
+        return json.dumps({"error": "unparseable", "rawLabel": raw_label})
+
+    order_id = order_match.group(0).upper()
+    route    = route_match.group(1).upper() if route_match else None
+    fragile  = fragile_match is not None
+
+    confidence = 1.0
+    if not route:
+        confidence -= 0.15
+    if fragile_match and fragile_match.group(0).lower() not in ("fragile",):
+        confidence -= 0.08  # fuzzy spelling
+
+    return json.dumps({
+        "orderId":    order_id,
+        "fragile":    fragile,
+        "route":      route,
+        "confidence": round(confidence, 2),
+    })
+
     return json.dumps({"error": "not implemented", "rawLabel": raw_label})
 
 
@@ -132,9 +162,7 @@ async def run_agent(question: str, show_steps: bool = False) -> None:
                 }
                 for t in tools_result.tools
             ]
-            # TODO (step 2): replace the line below with: mcp_tools + [PARSE_LABEL_TOOL]
-            all_tools = mcp_tools
-
+            all_tools = mcp_tools + [PARSE_LABEL_TOOL]
             messages = [
                 {"role": "system", "content": INSTRUCTIONS},
                 {"role": "user", "content": question},
@@ -160,8 +188,12 @@ async def run_agent(question: str, show_steps: bool = False) -> None:
 
                         # TODO (step 2): if tc.function.name == "parse_label", call
                         # parse_label(**args) in-process instead of going to the MCP server.
-                        result = await session.call_tool(tc.function.name, args)
-                        tool_text = result.content[0].text if result.content else ""
+                        # Dispatch native tool in-process; MCP tools go to the server.
+                        if tc.function.name == "parse_label":
+                            tool_text = parse_label(**args)
+                        else:
+                            result = await session.call_tool(tc.function.name, args)
+                            tool_text = result.content[0].text if result.content else ""
 
                         if show_steps:
                             print(f"   -> {tool_text}")

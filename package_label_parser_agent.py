@@ -134,47 +134,47 @@ PARSE_LABEL_TOOL: dict[str, Any] = {
 }
 
 
-# ── TODO (steps 2-4): A2A handoff ───────────────────────────────────────────
-#
-# TODO (step 2): Write the explicit handoff contract here before implementing
-# the classes. Paste the contract snippet from lab step 2 over these lines:
-#
-#   Handoff contract: RegionalManagerAgent -> PackageLabelParser
-#   Input data   : ???
-#   Artifact     : ???
-#   Failure      : ???
-#   Boundary     : ???
+
+# Handoff contract: RegionalManagerAgent -> PackageLabelParser
+#   Input data : rawLabel (str) - the raw shipping label text.
+#   Artifact   : {orderId, fragile, route, confidence} on success.
+#   Failure    : {error: "unparseable", rawLabel} - never guesses, never writes.
+#   Boundary   : parses text only; does not decide routes or act on systems.
 
 class PackageLabelParser:
-    """Specialist agent: parses a label and returns a structured artifact.
-
-    TODO (step 3): implement run() to call parse_label and return the parsed dict.
-    Paste the one-line snippet from lab step 3.
-    """
 
     def run(self, raw_label: str) -> dict[str, Any]:
-        # TODO (step 3): return json.loads(parse_label(raw_label))
-        return {"error": "not implemented", "rawLabel": raw_label}
+        """Parse the label and return the structured artifact (or an error artifact)."""
+        return json.loads(parse_label(raw_label))
 
 
 class RegionalManagerAgent:
-    """Coordinates operational decisions; delegates label parsing to PackageLabelParser.
-
-    TODO (step 4): implement handle_label to:
-      - call self._parser.run(raw_label)
-      - if show_handoff: print data sent and artifact received
-      - print "RegionalManagerAgent -> PackageLabelParser -> {artifact}"
-      - on error: print a hold/re-label decision
-      - on success: print a route/handle action based on fragile flag
-    Paste the snippet from lab step 4.
-    """
-
+    
     def __init__(self) -> None:
         self._parser = PackageLabelParser()
 
     def handle_label(self, raw_label: str, show_handoff: bool = False) -> None:
-        # TODO (step 4): implement - see lab step 4
-        print("TODO: implement handle_label - see lab step 4")
+        if show_handoff:
+            print("RegionalManagerAgent -> PackageLabelParser")
+            print(f"  Sending : rawLabel={raw_label!r}")
+
+        artifact = self._parser.run(raw_label)  # the handoff
+
+        if show_handoff:
+            print(f"  Received: {json.dumps(artifact)}")
+
+        print(f"RegionalManagerAgent -> PackageLabelParser -> {json.dumps(artifact)}")
+
+        if "error" in artifact:
+            print("Decision: label unparseable - hold package; request re-labelling.")
+        else:
+            action = (
+                "handle with care; verify fragile label before loading"
+                if artifact["fragile"]
+                else "route normally"
+            )
+            route = artifact.get("route") or "unknown route"
+            print(f"Decision: {action} for {artifact['orderId']} on {route}.")
 
 
 # ── Connected agent (Part 7 complete) + native parse_label ───────────────────
